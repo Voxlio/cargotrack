@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Control Panel Portal | Shipment Logistics</title>
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#FF3E41',
+                        secondary: '#0F172A',
+                        accent: '#06B6D4'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .custom-toast {
+            animation: slideIn 0.3s ease-out forwards;
+        }
+
+        .custom-toast.is-leaving {
+            animation: slideOut 0.25s ease-in forwards;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-1rem); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        @keyframes slideOut {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(-1rem); opacity: 0; }
+        }
+
+        [data-loading="true"] {
+            opacity: .6;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body class="bg-[#FAFAFA] text-slate-800 font-sans antialiased">
+    <!-- NOTIFICATION CONTAINER -->
+    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none"></div>
+
+    <!-- CUSTOM CONFIRM MODAL -->
+    <div id="custom-confirm" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-6 shadow-2xl border border-slate-100">
+            <div class="text-center">
+                <span class="w-12 h-12 bg-rose-50 text-rose-500 flex items-center justify-center text-xl mx-auto rounded-full mb-3">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </span>
+                <h3 class="font-bold text-slate-900 text-lg" id="confirm-title">Are you sure?</h3>
+                <p class="text-slate-500 text-xs mt-2 leading-relaxed" id="confirm-message">
+                    This action is permanent and will completely clear the tracking index from our servers.
+                </p>
+            </div>
+            <div class="mt-6 flex gap-3">
+                <button id="confirm-cancel-btn" class="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs uppercase tracking-wider transition-colors">
+                    Cancel
+                </button>
+                <button id="confirm-accept-btn" class="flex-1 py-2.5 bg-primary hover:bg-rose-600 text-white font-bold rounded-xl text-xs uppercase tracking-wider transition-colors">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGGED OUT -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center bg-slate-950 px-4">
+        <div class="max-w-md w-full bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl">
+            <div class="text-center mb-6">
+                <span class="w-14 h-14 bg-primary/10 text-primary flex items-center justify-center text-2xl mx-auto rounded-full mb-3">
+                    <i class="fa-solid fa-lock-open"></i>
+                </span>
+                <h2 class="text-white text-2xl font-bold">Staff Control Gateway</h2>
+                <p class="text-slate-400 text-xs mt-1">Unlock central logistics servers securely</p>
+            </div>
+
+            <form id="loginForm" class="space-y-4" autocomplete="on">
+                <div>
+                    <label for="username" class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Staff Username</label>
+                    <input type="text" id="username" name="username" required autocomplete="username" placeholder="admin"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-primary transition-colors">
+                </div>
+                <div>
+                    <label for="password" class="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Passkey Code</label>
+                    <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="••••••••"
+                        class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-primary transition-colors">
+                </div>
+                <div id="loginError" class="hidden text-xs text-rose-400 font-bold bg-rose-500/10 p-2.5 rounded border border-rose-500/20"></div>
+                <button type="submit" id="loginBtn"
+                    class="w-full py-3 bg-primary hover:bg-rose-600 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-colors">
+                    Authenticate Terminal
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- LOGGED IN -->
+    <div id="dashboard-screen" class="hidden min-h-screen flex-col">
+        <header class="bg-slate-950 text-white py-4 px-6 border-b border-slate-800 flex justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-primary text-white p-2.5 rounded-xl text-lg">
+                    <i class="fa-solid fa-satellite-dish animate-pulse"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight">CargoTracker Central</h1>
+                    <p class="text-[9px] text-slate-400 tracking-widest uppercase font-semibold">Live System Terminal</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="backendBadge" class="hidden sm:inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-full">
+                    <span class="w-1.5 h-1.5 rounded-full bg-slate-600"></span>
+                    <span id="backendLabel">connecting</span>
+                </span>
+                <a href="/" target="_blank" rel="noopener"
+                    class="text-[10px] font-bold uppercase tracking-wider text-slate-300 hover:text-white bg-slate-900 border border-slate-800 px-3 py-2 rounded-lg transition-colors">
+                    <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i> View site
+                </a>
+                <button id="logoutBtn"
+                    class="text-[10px] font-bold uppercase tracking-wider text-white bg-primary hover:bg-rose-600 px-3 py-2 rounded-lg transition-colors">
+                    <i class="fa-solid fa-power-off mr-1"></i> Sign out
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Create shipment -->
+            <div class="lg:col-span-5 bg-white border border-slate-200 p-6 sm:p-8 rounded-2xl shadow-sm">
+                <h3 class="font-bold text-lg text-slate-900 border-b border-slate-100 pb-3 mb-6">
+                    <i class="fa-solid fa-file-circle-plus text-primary mr-1"></i> Generate New Waybill
+                </h3>
+
+                <form id="createForm" class="space-y-4">
+                    <div>
+                        <label class="block font-bold text-slate-500 uppercase tracking-wider mb-1" for="shipper">Shipper Origin</label>
+                        <input type="text" id="shipper" required placeholder="Lux Logistics SA, Paris (CDG)"
+                            class="w-full bg-slate-50 border border-slate-200 rounded p-2.5 outline-none focus:border-primary">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-500 uppercase tracking-wider mb-1" for="receiver">Consignee Destination</label>
+                        <input type="text" id="receiver" required placeholder="TechCorp Industries, New York (JFK)"
+                            class="w-full bg-slate-50 border border-slate-200 rounded p-2.5 outline-none focus:border-primary">
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-500 uppercase tracking-wider mb-1" for="service">Service Level</label>
+                            <select id="service" class="w-full bg-slate-50 border border-slate-200 rounded p-2.5 outline-none focus:border-primary">
+                                <option>Express Air Freight Priority</option>
+                                <option>Overland Road Freight Cold-Chain</option>
+                                <option>Ocean Carrier Vessel Consignee</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-500 uppercase tracking-wider mb-1" for="status">Current Status</label>
+                            <select id="status" class="w-full bg-slate-50 border border-slate-200 rounded p-2.5 outline-none focus:border-primary">
+                                <option>Sorting Depot</option>
+                                <option>Customs Exception</option>
+                                <option>In Transit</option>
+                                <option>Delivered</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block font-bold text-slate-500 uppercase tracking-wider mb-1" for="weight">Weight</label>
+                            <input type="text" id="weight" placeholder="15.0 kg"
+                                class="w-full bg-slate-50 border border-slate-200 rounded p-2.5 outline-none focus:border-primary">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-500 uppercase tracking-wider mb-1" for="dimensions">Dimensions</label>
+                            <input type="text" id="dimensions" placeholder="40x40x40 cm"
+                                class="w-full bg-slate-50 border border-slate-200 rounded p-2.5 outline-none focus:border-primary">
+                        </div>
+                        <div>
+                            <label class="block font-bold text-slate-500 uppercase tracking-wider mb-1" for="temp">Temp</label>
+                            <input type="text" id="temp" placeholder="18.5°C"
+                                class="w-full bg-slate-50 border border-slate-200 rounded p-2.5 outline-none focus:border-primary">
+                        </div>
+                    </div>
+
+                    <details class="border border-slate-200 rounded-lg p-3 bg-slate-50/60">
+                        <summary class="cursor-pointer font-bold text-slate-600 uppercase tracking-wider text-[10px]">
+                            Custom checkpoints &amp; dates <span class="text-slate-400 font-medium normal-case tracking-normal">(optional — dates default to now, +4h, +12h, +24h)</span>
+                        </summary>
+                        <div class="mt-4 space-y-3">
+                            <div>
+                                <label class="block font-bold text-slate-500 uppercase tracking-wider mb-1" for="m1">Checkpoint 1 — pickup</label>
+                                <input type="text" id="m1" placeholder="Manifest Initiated &amp; Picked Up"
+                                    class="w-full bg-white border border-slate-200 rounded p-2.5 outline-none focus:border-primary">
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-500 uppercase tracking-wider mb-1" for="m2">Checkpoint 2 — sorted / customs</label>
+                                <input type="text" id="m2" placeholder="Freight Sorted &amp; Consolidated"
+                                    class="w-full bg-white border border-slate-200 rounded p-2.5 outline-none focus:border-primary">
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-500 uppercase tracking-wider mb-1" for="m3">Checkpoint 3 — transit</label>
+                                <input type="text" id="m3" placeholder="Departed facility node on route transit"
+                                    class="w-full bg-white border border-slate-200 rounded p-2.5 outline-none focus:border-primary">
+                            </div>
+                            <div>
+                                <label class="block font-bold text-slate-500 uppercase tracking-wider mb-1" for="m4">Checkpoint 4 — delivered</label>
+                                <input type="text" id="m4" placeholder="Cargo Delivered &amp; Completed"
+                                    class="w-full bg-white border border-slate-200 rounded p-2.5 outline-none focus:border-primary">
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block font-bold text-slate-500 uppercase tracking-wider mb-1" for="initiatedDate">Initiated</label>
+                                    <input type="datetime-local" id="initiatedDate"
+                                        class="w-full bg-white border border-slate-200 rounded p-2.5 outline-none focus:border-primary">
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-500 uppercase tracking-wider mb-1" for="departedDate">Departed</label>
+                                    <input type="datetime-local" id="departedDate"
+                                        class="w-full bg-white border border-slate-200 rounded p-2.5 outline-none focus:border-primary">
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-500 uppercase tracking-wider mb-1" for="onTransitDate">In transit</label>
+                                    <input type="datetime-local" id="onTransitDate"
+                                        class="w-full bg-white border border-slate-200 rounded p-2.5 outline-none focus:border-primary">
+                                </div>
+                                <div>
+                                    <label class="block font-bold text-slate-500 uppercase tracking-wider mb-1" for="deliveredDate">Delivered</label>
+                                    <input type="datetime-local" id="deliveredDate"
+                                        class="w-full bg-white border border-slate-200 rounded p-2.5 outline-none focus:border-primary">
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+
+                    <button type="submit" id="createBtn"
+                        class="w-full py-3 bg-primary hover:bg-rose-600 text-white font-bold rounded-lg text-xs uppercase tracking-wider transition-colors">
+                        <i class="fa-solid fa-barcode mr-1"></i> Generate Waybill
+                    </button>
+                </form>
+            </div>
+
+            <!-- Package index -->
+            <div class="lg:col-span-7 bg-white border border-slate-200 p-6 sm:p-8 rounded-2xl shadow-sm">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-3 mb-6 gap-3">
+                    <h3 class="font-bold text-lg text-slate-900">
+                        <i class="fa-solid fa-boxes-stacked text-primary mr-1"></i> Package Index
+                    </h3>
+                    <div class="flex items-center gap-3">
+                        <input type="search" id="packageSearch" placeholder="Filter by ID, route..."
+                            class="hidden sm:block bg-slate-50 border border-slate-200 rounded-lg px-3 py-1.5 text-xs outline-none focus:border-primary w-44">
+                        <span id="packageCount" class="text-xs font-bold text-slate-400 uppercase tracking-wider">-</span>
+                        <button id="refreshBtn" title="Refresh"
+                            class="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition-colors">
+                            <i class="fa-solid fa-rotate text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead>
+                            <tr class="text-slate-400 font-bold border-b border-slate-100 uppercase tracking-wider">
+                                <th class="py-3 px-2">ID</th>
+                                <th class="py-3 px-2">Route Details</th>
+                                <th class="py-3 px-2">Current State</th>
+                                <th class="py-3 px-2 text-right">Modifier Ops</th>
+                            </tr>
+                        </thead>
+                        <tbody id="shipment-rows" class="divide-y divide-slate-100">
+                            <tr>
+                                <td colspan="4" class="py-10 text-center text-slate-400 text-xs">Loading package index…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        // Same-origin by default: on Vercel the static site and /api functions
+        // share a domain. Override with window.__API_BASE__ if the API moves.
+        const API_BASE = window.__API_BASE__ || '';
+        const TOKEN_KEY = 'staffToken';
+
+        const STATUSES = ['Sorting Depot', 'Customs Exception', 'In Transit', 'Delivered'];
+
+        const BADGE = {
+            'Sorting Depot': 'bg-sky-500/10 text-sky-600 border border-sky-500/30',
+            'Customs Exception': 'bg-rose-500/10 text-rose-600 border border-rose-500/30',
+            'In Transit': 'bg-amber-500/10 text-amber-600 border border-amber-500/30',
+            'Delivered': 'bg-emerald-500/10 text-emerald-600 border border-emerald-500/30'
+        };
+
+        let shipments = {};
+        let filterText = '';
+
+        /* ---------------- helpers ---------------- */
+
+        const $ = (id) => document.getElementById(id);
+        const token = () => sessionStorage.getItem(TOKEN_KEY);
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, (c) => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            })[c]);
+        }
+
+        /** fetch wrapper that attaches the staff token and handles expiry. */
+        async function api(path, options = {}) {
+            const headers = Object.assign({}, options.headers);
+            if (options.body) headers['Content-Type'] = 'application/json';
+            const t = token();
+            if (t) headers.Authorization = 'Bearer ' + t;
+
+            const res = await fetch(API_BASE + path, Object.assign({}, options, { headers }));
+
+            if (res.status === 401) {
+                signOut(true);
+                throw new Error('Session expired. Please sign in again.');
+            }
+
+            let data = null;
+            try { data = await res.json(); } catch (e) { /* empty body */ }
+
+            if (!res.ok) {
+                const err = new Error((data && data.error) || ('Request failed with HTTP ' + res.status));
+                err.status = res.status;
+                throw err;
+            }
+            return data;
+        }
+
+        function showNotification(message, type = 'success') {
+            const container = $('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'custom-toast pointer-events-auto flex items-start gap-3 p-4 rounded-xl shadow-lg border text-xs font-semibold bg-white ' +
+                (type === 'success'
+                    ? 'border-emerald-500/20 text-emerald-800 shadow-emerald-500/5'
+                    : 'border-rose-500/20 text-rose-800 shadow-rose-500/5');
+
+            toast.innerHTML =
+                '<i class="fa-solid ' + (type === 'success' ? 'fa-circle-check text-emerald-500' : 'fa-circle-exclamation text-rose-500') + ' mt-0.5"></i>' +
+                '<span class="flex-1 leading-relaxed">' + escapeHtml(message) + '</span>';
+
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('is-leaving');
+                setTimeout(() => toast.remove(), 260);
+            }, 3800);
+        }
+
+        /** Promise-based replacement for window.confirm. */
+        function confirmAction(title, message, acceptLabel = 'Delete') {
+            return new Promise((resolve) => {
+                const modal = $('custom-confirm');
+                const accept = $('confirm-accept-btn');
+                const cancel = $('confirm-cancel-btn');
+
+                $('confirm-title').textContent = title;
+                $('confirm-message').textContent = message;
+                accept.textContent = acceptLabel;
+
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+
+                const cleanup = () => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('flex');
+                    accept.removeEventListener('click', onAccept);
+                    cancel.removeEventListener('click', onCancel);
+                };
+                const onAccept = () => { cleanup(); resolve(true); };
+                const onCancel = () => { cleanup(); resolve(false); };
+
+                accept.addEventListener('click', onAccept);
+                cancel.addEventListener('click', onCancel);
+            });
+        }
+
+        function busy(button, state) {
+            if (!button) return;
+            button.dataset.loading = state ? 'true' : 'false';
+            button.disabled = Boolean(state);
+        }
+
+        /* ---------------- auth ---------------- */
+
+        function showDashboard() {
+            $('login-screen').classList.add('hidden');
+            $('dashboard-screen').classList.remove('hidden');
+            $('dashboard-screen').classList.add('flex');
+            loadHealth();
+            fetchShipments();
+        }
+
+        function signOut(silent) {
+            sessionStorage.removeItem(TOKEN_KEY);
+            $('dashboard-screen').classList.add('hidden');
+            $('dashboard-screen').classList.remove('flex');
+            $('login-screen').classList.remove('hidden');
+            shipments = {};
+            if (!silent) showNotification('Signed out of the terminal.', 'success');
+        }
+
+        $('logoutBtn').addEventListener('click', () => signOut(false));
+
+        $('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const errBox = $('loginError');
+            const btn = $('loginBtn');
+            errBox.classList.add('hidden');
+
+            busy(btn, true);
+            try {
+                const data = await api('/api/auth/login', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        username: $('username').value,
+                        password: $('password').value
+                    })
+                });
+
+                sessionStorage.setItem(TOKEN_KEY, data.token);
+                $('password').value = '';
+                showDashboard();
+                showNotification('Terminal unlocked. Welcome, ' + (data.user || 'Operator') + '.');
+            } catch (err) {
+                errBox.textContent = err.message || 'Unable to reach the backend servers.';
+                errBox.classList.remove('hidden');
+            } finally {
+                busy(btn, false);
+            }
+        });
+
+        /** Validate a stored token before trusting it. */
+        async function restoreSession() {
+            if (!token()) return;
+            try {
+                await api('/api/auth/session');
+                showDashboard();
+            } catch (err) {
+                signOut(true);
+            }
+        }
+
+        /* ---------------- data ---------------- */
+
+        async function loadHealth() {
+            const badge = $('backendBadge');
+            const label = $('backendLabel');
+            try {
+                const res = await fetch(API_BASE + '/api/health');
+                const data = await res.json();
+                badge.classList.remove('hidden');
+                badge.classList.add('inline-flex');
+
+                const dot = badge.querySelector('span');
+                dot.className = 'w-1.5 h-1.5 rounded-full ' + (data.ok ? 'bg-emerald-500' : 'bg-rose-500');
+                label.textContent = data.ok
+                    ? (data.storage.backend === 'redis' ? 'redis · healthy' : 'file db · local')
+                    : 'storage down';
+            } catch (err) {
+                label.textContent = 'offline';
+            }
+        }
+
+        async function fetchShipments() {
+            const tbody = $('shipment-rows');
+            try {
+                shipments = await api('/api/shipments');
+                renderShipments();
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="4" class="py-10 text-center text-rose-500 text-xs font-semibold">' +
+                    escapeHtml(err.message) + '</td></tr>';
+            }
+        }
+
+        function rowFor(id, pack) {
+            const badge = BADGE[pack.status] || BADGE['Sorting Depot'];
+            const options = STATUSES.map((s) =>
+                '<option value="' + escapeHtml(s) + '"' + (s === pack.status ? ' selected' : '') + '>' + escapeHtml(s) + '</option>'
+            ).join('');
+
+            return '<tr data-id="' + escapeHtml(id) + '">' +
+                '<td class="py-3 px-2 align-top">' +
+                '  <p class="font-mono font-bold text-slate-900">' + escapeHtml(id) + '</p>' +
+                '  <p class="font-mono text-[10px] text-slate-400 mt-0.5">' + escapeHtml(pack.waybill || '—') + '</p>' +
+                '</td>' +
+                '<td class="py-3 px-2 align-top">' +
+                '  <p class="text-slate-700 font-semibold">' + escapeHtml(pack.shipper || '—') + '</p>' +
+                '  <p class="text-slate-400 mt-0.5"><i class="fa-solid fa-arrow-right-long mx-1 text-[9px]"></i>' + escapeHtml(pack.receiver || '—') + '</p>' +
+                '</td>' +
+                '<td class="py-3 px-2 align-top">' +
+                '  <span class="text-[10px] font-extrabold uppercase px-2 py-1 rounded whitespace-nowrap ' + badge + '">' + escapeHtml(pack.status || '—') + '</span>' +
+                '  <p class="text-[10px] text-slate-400 mt-1.5 max-w-[16rem] truncate" title="' + escapeHtml(pack.location || '') + '">' +
+                '    <i class="fa-solid fa-location-dot mr-1"></i>' + escapeHtml(pack.location || '—') + '</p>' +
+                '  <p class="text-[10px] text-slate-400 mt-0.5">' + escapeHtml(pack.eta || '') + '</p>' +
+                '</td>' +
+                '<td class="py-3 px-2 align-top text-right">' +
+                '  <div class="inline-flex items-center gap-2">' +
+                '    <select class="quick-status bg-slate-50 border border-slate-200 hover:border-slate-300 rounded px-2 py-1.5 text-[11px] font-semibold text-slate-700 outline-none focus:border-primary transition cursor-pointer">' +
+                options +
+                '    </select>' +
+                '    <button class="delete-btn w-8 h-8 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-500 transition-colors" title="Delete waybill">' +
+                '      <i class="fa-solid fa-trash-can text-[11px]"></i>' +
+                '    </button>' +
+                '  </div>' +
+                '</td>' +
+                '</tr>';
+        }
+
+        function renderShipments() {
+            const tbody = $('shipment-rows');
+            const ids = Object.keys(shipments).sort();
+
+            const needle = filterText.trim().toLowerCase();
+            const visible = needle
+                ? ids.filter((id) => {
+                    const p = shipments[id] || {};
+                    return (id + ' ' + (p.shipper || '') + ' ' + (p.receiver || '') + ' ' + (p.status || '') + ' ' + (p.waybill || ''))
+                        .toLowerCase().includes(needle);
+                })
+                : ids;
+
+            $('packageCount').textContent = visible.length + (needle ? ' / ' + ids.length : '') + ' manifest' + (ids.length === 1 ? '' : 's');
+
+            if (!ids.length) {
+                tbody.innerHTML = '<tr><td colspan="4" class="py-10 text-center text-slate-400 text-xs">' +
+                    'No waybills yet. Generate the first one on the left.</td></tr>';
+                return;
+            }
+
+            if (!visible.length) {
+                tbody.innerHTML = '<tr><td colspan="4" class="py-10 text-center text-slate-400 text-xs">' +
+                    'No waybills match &ldquo;' + escapeHtml(filterText) + '&rdquo;.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = visible.map((id) => rowFor(id, shipments[id] || {})).join('');
+        }
+
+        /* ---------------- row actions (delegated) ---------------- */
+
+        $('shipment-rows').addEventListener('change', async (e) => {
+            const select = e.target.closest('.quick-status');
+            if (!select) return;
+
+            const id = select.closest('tr').dataset.id;
+            const status = select.value;
+            const previous = shipments[id] && shipments[id].status;
+
+            busy(select, true);
+            try {
+                const data = await api('/api/shipments/' + encodeURIComponent(id) + '/status', {
+                    method: 'PUT',
+                    body: JSON.stringify({ status })
+                });
+                shipments[id] = data.shipment;
+                renderShipments();
+                showNotification(id + ' updated to ' + status + '.');
+            } catch (err) {
+                select.value = previous || '';
+                showNotification(err.message || 'Status update failed.', 'error');
+            } finally {
+                busy(select, false);
+            }
+        });
+
+        $('shipment-rows').addEventListener('click', async (e) => {
+            const button = e.target.closest('.delete-btn');
+            if (!button) return;
+
+            const id = button.closest('tr').dataset.id;
+            const ok = await confirmAction(
+                'Delete ' + id + '?',
+                'This permanently removes the waybill from the tracking database. The public tracking page will stop finding it.',
+                'Delete'
+            );
+            if (!ok) return;
+
+            busy(button, true);
+            try {
+                await api('/api/shipments/' + encodeURIComponent(id), { method: 'DELETE' });
+                delete shipments[id];
+                renderShipments();
+                showNotification(id + ' permanently removed.');
+            } catch (err) {
+                showNotification(err.message || 'Delete failed.', 'error');
+            } finally {
+                busy(button, false);
+            }
+        });
+
+        $('refreshBtn').addEventListener('click', async (e) => {
+            busy(e.currentTarget, true);
+            await fetchShipments();
+            await loadHealth();
+            busy(e.currentTarget, false);
+        });
+
+        $('packageSearch').addEventListener('input', (e) => {
+            filterText = e.target.value;
+            renderShipments();
+        });
+
+        /* ---------------- create ---------------- */
+
+        $('createForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = $('createBtn');
+
+            const body = {
+                shipper: $('shipper').value,
+                receiver: $('receiver').value,
+                service: $('service').value,
+                status: $('status').value,
+                weight: $('weight').value,
+                dimensions: $('dimensions').value,
+                temp: $('temp').value,
+                m1: $('m1').value,
+                m2: $('m2').value,
+                m3: $('m3').value,
+                m4: $('m4').value,
+                initiatedDate: $('initiatedDate').value,
+                departedDate: $('departedDate').value,
+                onTransitDate: $('onTransitDate').value,
+                deliveredDate: $('deliveredDate').value
+            };
+
+            busy(btn, true);
+            try {
+                const data = await api('/api/shipments/create', {
+                    method: 'POST',
+                    body: JSON.stringify(body)
+                });
+                shipments[data.trackingID] = data.shipment;
+                renderShipments();
+                $('createForm').reset();
+                $('status').value = 'Sorting Depot';
+                showNotification('Waybill ' + data.trackingID + ' generated.');
+            } catch (err) {
+                showNotification(err.message || 'Could not generate the waybill.', 'error');
+            } finally {
+                busy(btn, false);
+            }
+        });
+
+        /* ---------------- boot ---------------- */
+
+        restoreSession();
+    </script>
+</body>
+
+</html>

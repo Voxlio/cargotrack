@@ -1,0 +1,29 @@
+{
+  "name": "shipp-backend",
+  "version": "1.1.0",
+  "description": "CargoTracker logistics API and staff console, deployed to Vercel",
+  "main": "server.js",
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test",
+    "fetch-images": "node scripts/fetch-images.mjs",
+    "placeholders": "node scripts/generate-placeholders.mjs"
+  },
+  "keywords": [
+    "logistics",
+    "tracking",
+    "express",
+    "vercel"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "express": "^5.2.1"
+  }
+}

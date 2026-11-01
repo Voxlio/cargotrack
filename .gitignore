@@ -1,0 +1,17 @@
+node_modules/
+
+# Secrets — never commit real credentials
+.env
+.env.local
+.env.*.local
+.env.production
+
+# Vercel
+.vercel
+
+# Local junk
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+database.json.*.tmp

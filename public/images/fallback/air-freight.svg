@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400" role="img" aria-label="Air Freight">
+  <defs>
+    <linearGradient id="g-1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#1E293B"/>
+    </linearGradient>
+    <pattern id="p-1" width="28" height="28" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="28" stroke="#06B6D4" stroke-opacity="0.10" stroke-width="2"/>
+    </pattern>
+  </defs>
+  <rect width="600" height="400" fill="url(#g-1)"/>
+  <rect width="600" height="400" fill="url(#p-1)"/>
+  <rect x="0" y="0" width="600" height="4" fill="#FF3E41"/>
+  <g font-family="Inter, Poppins, Segoe UI, Helvetica, Arial, sans-serif" text-anchor="middle" fill="#FFFFFF">
+    <text x="300" y="204.4" font-size="44" font-weight="700" letter-spacing="0.5">Air Freight</text>
+    
+    <text x="300" y="364" font-size="23" font-weight="600" fill="#06B6D4" letter-spacing="4.14">CARGOTRACKER</text>
+  </g>
+</svg>
